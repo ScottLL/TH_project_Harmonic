@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "backend"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+sqlalchemy = "^2.0.31"
+fastapi = "^0.111.1"
+uvicorn = "^0.30.3"
+asyncpg = "^0.29.0"
+psycopg2-binary = "^2.9.9"
+pydantic = "^2.8.2"
+debugpy = "^1.8.2"
+randomname = "^0.2.1"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+select = ["E4", "E7", "E9", "F", "B020", "PLW2901", "UP006"]
+ignore = ["E731", "E711", "E712"]
