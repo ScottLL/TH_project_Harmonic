@@ -181,3 +181,17 @@ export async function createCollection(request: ICreateCollectionRequest): Promi
         throw error;
     }
 }
+
+export interface IDeleteCollectionResponse {
+    message: string;
+}
+
+export async function deleteCollection(collectionId: string): Promise<IDeleteCollectionResponse> {
+    try {
+        const response = await axios.delete(`${BASE_URL}/collections/${collectionId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting collection:', error);
+        throw error;
+    }
+}

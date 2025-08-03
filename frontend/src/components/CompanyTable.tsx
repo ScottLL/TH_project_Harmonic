@@ -317,7 +317,7 @@ function CompanyTable({ selectedCollectionId }: CompanyTableProps) {
   const columns: GridColDef[] = [
     { field: "liked", headerName: "Liked", width: 90, type: "boolean" },
     { field: "id", headerName: "ID", width: 90 },
-    { field: "company_name", headerName: "Company Name", width: 300, flex: 1 },
+    { field: "company_name", headerName: "Company Name", width: 200 },
   ];
 
   return (

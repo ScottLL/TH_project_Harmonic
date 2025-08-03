@@ -2,13 +2,13 @@ import "./App.css";
 
 import CssBaseline from "@mui/material/CssBaseline";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { IconButton } from "@mui/material";
+import { IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import CompanyTable from "./components/CompanyTable";
 import CreateCollectionModal from "./components/CreateCollectionModal";
 import DraggableCollections from "./components/DraggableCollections";
-import { getCollectionsMetadata, ICollection } from "./utils/jam-api";
+import { getCollectionsMetadata, deleteCollection, ICollection } from "./utils/jam-api";
 import useApi from "./utils/useApi";
 
 const darkTheme = createTheme({
@@ -23,6 +23,8 @@ function App() {
   const [collections, setCollections] = useState<ICollection[]>([]);
   const [loadingCollections, setLoadingCollections] = useState(true);
   const [collectionOrder, setCollectionOrder] = useState<string[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [collectionToDelete, setCollectionToDelete] = useState<{id: string, name: string} | null>(null);
 
   // Load collections
   useEffect(() => {
@@ -100,6 +102,43 @@ function App() {
     return orderedCollections;
   };
 
+  const handleDeleteCollection = (id: string, name: string) => {
+    setCollectionToDelete({ id, name });
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteCollection = async () => {
+    if (!collectionToDelete) return;
+
+    try {
+      await deleteCollection(collectionToDelete.id);
+      
+      // If the deleted collection was selected, switch to the first available collection
+      if (selectedCollectionId === collectionToDelete.id) {
+        const remainingCollections = collections.filter(c => c.id !== collectionToDelete.id);
+        if (remainingCollections.length > 0) {
+          setSelectedCollectionId(remainingCollections[0].id);
+        } else {
+          setSelectedCollectionId(undefined);
+        }
+      }
+      
+      // Refresh the collections list
+      await loadCollections();
+    } catch (error) {
+      console.error('Error deleting collection:', error);
+      // You might want to show an error message to the user here
+    } finally {
+      setShowDeleteDialog(false);
+      setCollectionToDelete(null);
+    }
+  };
+
+  const cancelDeleteCollection = () => {
+    setShowDeleteDialog(false);
+    setCollectionToDelete(null);
+  };
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -130,6 +169,7 @@ function App() {
                 selectedCollectionId={selectedCollectionId}
                 onSelectCollection={setSelectedCollectionId}
                 onReorderCollections={handleReorderCollections}
+                onDeleteCollection={handleDeleteCollection}
               />
             )}
           </div>
@@ -146,6 +186,27 @@ function App() {
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleCreateCollection}
         />
+
+        {/* Delete Collection Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onClose={cancelDeleteCollection} maxWidth="sm" fullWidth>
+          <DialogTitle>Delete Collection</DialogTitle>
+          <DialogContent>
+            <Typography variant="body1">
+              Are you sure you want to delete the collection "{collectionToDelete?.name}"?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              This action cannot be undone. All companies in this collection will be removed.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={cancelDeleteCollection} color="inherit">
+              Cancel
+            </Button>
+            <Button onClick={confirmDeleteCollection} color="error" variant="contained">
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     </ThemeProvider>
   );

@@ -18,16 +18,18 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { DragIndicator } from '@mui/icons-material';
+import { DragIndicator, Delete } from '@mui/icons-material';
+import { IconButton } from '@mui/material';
 import { ICollection } from '../utils/jam-api';
 
 interface SortableCollectionItemProps {
   collection: ICollection;
   isSelected: boolean;
   onSelect: (id: string) => void;
+  onDelete: (id: string, name: string) => void;
 }
 
-function SortableCollectionItem({ collection, isSelected, onSelect }: SortableCollectionItemProps) {
+function SortableCollectionItem({ collection, isSelected, onSelect, onDelete }: SortableCollectionItemProps) {
   const {
     attributes,
     listeners,
@@ -65,6 +67,26 @@ function SortableCollectionItem({ collection, isSelected, onSelect }: SortableCo
       >
         {collection.collection_name}
       </div>
+      <IconButton
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(collection.id, collection.collection_name);
+        }}
+        className="mr-2 opacity-70 hover:opacity-100"
+        title={`Delete ${collection.collection_name}`}
+        sx={{
+          '& .MuiSvgIcon-root': {
+            color: 'gray',
+            transition: 'color 0.2s ease',
+          },
+          '&:hover .MuiSvgIcon-root': {
+            color: 'red',
+          },
+        }}
+      >
+        <Delete fontSize="small" />
+      </IconButton>
     </div>
   );
 }
@@ -74,6 +96,7 @@ interface DraggableCollectionsProps {
   selectedCollectionId?: string;
   onSelectCollection: (id: string) => void;
   onReorderCollections: (collections: ICollection[]) => void;
+  onDeleteCollection: (id: string, name: string) => void;
 }
 
 function DraggableCollections({
@@ -81,6 +104,7 @@ function DraggableCollections({
   selectedCollectionId,
   onSelectCollection,
   onReorderCollections,
+  onDeleteCollection,
 }: DraggableCollectionsProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -136,6 +160,7 @@ function DraggableCollections({
                 collection={collection}
                 isSelected={selectedCollectionId === collection.id}
                 onSelect={onSelectCollection}
+                onDelete={onDeleteCollection}
               />
             ))}
           </SortableContext>

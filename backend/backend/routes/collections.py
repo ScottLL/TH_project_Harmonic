@@ -1,9 +1,9 @@
 import uuid
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, or_
 from sqlalchemy.orm import Session
 
 from backend.db import database
@@ -205,7 +205,6 @@ def create_collection(
     ).first()
     
     if existing:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Collection name already exists")
     
     # Create new collection
@@ -221,4 +220,49 @@ def create_collection(
         id=new_collection.id,
         collection_name=new_collection.collection_name,
         message="Collection created successfully"
+    )
+
+
+class DeleteCollectionResponse(BaseModel):
+    message: str
+
+
+@router.delete("/{collection_id}", response_model=DeleteCollectionResponse)
+def delete_collection(
+    collection_id: uuid.UUID,
+    db: Session = Depends(database.get_db),
+):
+    """Delete a collection and all its associations"""
+    
+    # Find the collection
+    collection = db.query(database.CompanyCollection).filter(
+        database.CompanyCollection.id == collection_id
+    ).first()
+    
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    # Prevent deletion of "My List" collection
+    if collection.collection_name == "My List":
+        raise HTTPException(status_code=400, detail="Cannot delete the 'My List' collection")
+    
+    # Delete related batch jobs first (both as source and target collection)
+    db.query(database.BatchJob).filter(
+        or_(
+            database.BatchJob.source_collection_id == collection_id,
+            database.BatchJob.target_collection_id == collection_id
+        )
+    ).delete()
+    
+    # Delete all company-collection associations
+    db.query(database.CompanyCollectionAssociation).filter(
+        database.CompanyCollectionAssociation.collection_id == collection_id
+    ).delete()
+    
+    # Delete the collection itself
+    db.delete(collection)
+    db.commit()
+    
+    return DeleteCollectionResponse(
+        message=f"Collection '{collection.collection_name}' deleted successfully"
     )
