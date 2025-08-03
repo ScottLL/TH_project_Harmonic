@@ -3,6 +3,7 @@ import os
 import uuid
 from datetime import datetime
 from typing import Union
+from enum import Enum
 
 from sqlalchemy import (
     Column,
@@ -13,6 +14,8 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     func,
+    Enum as SQLEnum,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
@@ -72,4 +75,38 @@ class CompanyCollectionAssociation(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"))
     collection_id = Column(UUID(as_uuid=True), ForeignKey("company_collections.id"))
+
+
+class BatchJobStatus(Enum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class BatchJobType(Enum):
+    ADD = "ADD"
+    DELETE = "DELETE"
+
+
+class BatchJob(Base):
+    __tablename__ = "batch_jobs"
+
+    id: Column[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at: Union[datetime, Column[datetime]] = Column(
+        DateTime, default=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+    updated_at: Union[datetime, Column[datetime]] = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+    status = Column(SQLEnum(BatchJobStatus), default=BatchJobStatus.PENDING, nullable=False)
+    job_type = Column(SQLEnum(BatchJobType), default=BatchJobType.ADD, nullable=False)
+    source_collection_id = Column(UUID(as_uuid=True), ForeignKey("company_collections.id"), nullable=False)
+    target_collection_id = Column(UUID(as_uuid=True), ForeignKey("company_collections.id"), nullable=True)  # nullable for DELETE operations
+    total_count = Column(Integer, default=0, nullable=False)
+    processed_count = Column(Integer, default=0, nullable=False)
+    error_message = Column(Text, nullable=True)
+    # Store the company IDs to be processed as JSON text for simplicity
+    company_ids_json = Column(Text, nullable=True)
 
