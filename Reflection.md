@@ -4,6 +4,9 @@
 
 This document reflects on the implementation of a comprehensive batch operations system for managing company collections, including cursor-based pagination, background job processing, real-time progress tracking, and collection drag-and-drop reordering.
 
+https://github.com/user-attachments/assets/2b7f6d85-7dd4-4bcb-b063-b0f8df2bf50f
+
+
 ## Technical Approach
 
 ### 1. **Architecture Decision: Background Job Processing**
