@@ -7,6 +7,7 @@ import { Add as AddIcon } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import CompanyTable from "./components/CompanyTable";
 import CreateCollectionModal from "./components/CreateCollectionModal";
+import DraggableCollections from "./components/DraggableCollections";
 import { getCollectionsMetadata, ICollection } from "./utils/jam-api";
 import useApi from "./utils/useApi";
 
@@ -21,6 +22,7 @@ function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [collections, setCollections] = useState<ICollection[]>([]);
   const [loadingCollections, setLoadingCollections] = useState(true);
+  const [collectionOrder, setCollectionOrder] = useState<string[]>([]);
 
   // Load collections
   useEffect(() => {
@@ -32,6 +34,12 @@ function App() {
       setLoadingCollections(true);
       const data = await getCollectionsMetadata();
       setCollections(data);
+      
+      // Load saved order from localStorage
+      const savedOrder = localStorage.getItem('collectionOrder');
+      if (savedOrder) {
+        setCollectionOrder(JSON.parse(savedOrder));
+      }
     } catch (error) {
       console.error('Error loading collections:', error);
     } finally {
@@ -58,6 +66,40 @@ function App() {
     setSelectedCollectionId(newCollection.id);
   };
 
+  const handleReorderCollections = (reorderedCollections: ICollection[]) => {
+    const newOrder = reorderedCollections.map(col => col.id);
+    setCollectionOrder(newOrder);
+    
+    // Save to localStorage
+    localStorage.setItem('collectionOrder', JSON.stringify(newOrder));
+  };
+
+  const getOrderedCollections = (): ICollection[] => {
+    if (collectionOrder.length === 0) {
+      return collections;
+    }
+
+    // Sort collections based on saved order
+    const orderedCollections = [...collections].sort((a, b) => {
+      const aIndex = collectionOrder.indexOf(a.id);
+      const bIndex = collectionOrder.indexOf(b.id);
+      
+      // If both items are in the order array, use their positions
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+      
+      // If only one item is in the order array, prioritize it
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      
+      // If neither item is in the order array, maintain original order
+      return 0;
+    });
+
+    return orderedCollections;
+  };
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -78,28 +120,18 @@ function App() {
                 <AddIcon fontSize="small" />
               </IconButton>
             </div>
-            <div className="flex flex-col gap-2 text-left">
-              {loadingCollections ? (
+            {loadingCollections ? (
+              <div className="flex flex-col gap-2 text-left">
                 <p className="text-gray-400 pl-4">Loading...</p>
-              ) : (
-                collections?.map((collection) => {
-                  return (
-                    <div
-                      key={collection.id}
-                      className={`py-1 pl-4 hover:cursor-pointer hover:bg-orange-300 ${
-                        selectedCollectionId === collection.id &&
-                        "bg-orange-500 font-bold"
-                      }`}
-                      onClick={() => {
-                        setSelectedCollectionId(collection.id);
-                      }}
-                    >
-                      {collection.collection_name}
-                    </div>
-                  );
-                })
-              )}
-            </div>
+              </div>
+            ) : (
+              <DraggableCollections
+                collections={getOrderedCollections()}
+                selectedCollectionId={selectedCollectionId}
+                onSelectCollection={setSelectedCollectionId}
+                onReorderCollections={handleReorderCollections}
+              />
+            )}
           </div>
           <div className="w-4/5 ml-4">
             {selectedCollectionId && (
